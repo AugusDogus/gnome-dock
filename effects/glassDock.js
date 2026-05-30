@@ -107,7 +107,7 @@ export class GlassDock {
     _applyEffect() {
         this._targetActor.set_pivot_point(0.5, 0.5);
 
-        this._bgActor = new St.Widget({
+        this._bgActor = new Clutter.Actor({
             name: 'gnomeDockGlassBackground',
             clip_to_allocation: false,
             reactive: false,
@@ -115,7 +115,7 @@ export class GlassDock {
         this._bgActor.set_size(1, 1);
         this._bgActor.set_pivot_point(0, 0);
 
-        this._clipBox = new St.Widget({
+        this._clipBox = new Clutter.Actor({
             name: 'gnomeDockGlassClipBox',
             clip_to_allocation: true,
             reactive: false,
@@ -326,6 +326,7 @@ export class GlassDock {
             this._windowClonesContainer.add_child(clone);
             this._windowClones.set(w, clone);
         }
+
     }
 
     _startFrameSync() {
@@ -379,7 +380,6 @@ export class GlassDock {
 
         this._ensureStacked();
 
-        let debugGapInfo = null;
         let heldStableHeight = false;
 
         let sourceActor = this._targetActor;
@@ -497,13 +497,6 @@ export class GlassDock {
                     if (isHorizontalDock) {
                         const diff = Math.abs(bottomGap - topGap);
                         if (diff > 0 && diff < baseH / 2) {
-                            debugGapInfo = {
-                                axis: 'vertical',
-                                topGap,
-                                bottomGap,
-                                diff,
-                                action: bottomGap > topGap ? 'shrink-bottom' : 'shift-down-and-shrink',
-                            };
                             if (bottomGap > topGap)
                                 baseH -= diff;
                             else {
@@ -514,15 +507,6 @@ export class GlassDock {
                     } else {
                         const diff = Math.abs(rightGap - leftGap);
                         if (diff > 0 && diff < baseW / 2) {
-                            debugGapInfo = {
-                                axis: 'horizontal',
-                                leftGap,
-                                rightGap,
-                                diff,
-                                action: minCenterDist === distLeftCenter
-                                    ? 'left-dock-trim'
-                                    : 'right-dock-trim',
-                            };
                             if (minCenterDist === distLeftCenter) {
                                 if (rightGap > leftGap)
                                     baseW -= diff;
@@ -549,8 +533,6 @@ export class GlassDock {
         this._lastBaseH = baseH;
         this._prevFrameBaseW = baseW;
 
-        let debugStableBaseW = null;
-        let debugStableBaseH = null;
         const marginValue = this._marginValue;
         if (monitor && marginValue > 0) {
             this._lastAbsX = absX;
@@ -568,9 +550,6 @@ export class GlassDock {
 
             const stableBaseW = tW + this._stableDeltaW;
             const stableBaseH = tH + this._stableDeltaH;
-            debugStableBaseW = stableBaseW;
-            debugStableBaseH = stableBaseH;
-
             if (minCenterDist === distBottomCenter) {
                 const expectedBottom = monitor.y + monitor.height - marginValue;
                 if (absY + baseH > expectedBottom) {
@@ -635,10 +614,11 @@ export class GlassDock {
         else
             this._bgActor.opacity = this._targetActor.opacity;
 
-        const bgW = Math.max(1, w + (SHADER_PADDING * 2) + (this._glassExpand * 2));
-        const bgH = Math.max(1, h + (SHADER_PADDING * 2) + (this._glassExpand * 2));
-        const bgX = absX - SHADER_PADDING - this._glassExpand;
-        const bgY = absY - SHADER_PADDING - this._glassExpand;
+        const shaderPadding = SHADER_PADDING;
+        const bgW = Math.max(1, w + (shaderPadding * 2) + (this._glassExpand * 2));
+        const bgH = Math.max(1, h + (shaderPadding * 2) + (this._glassExpand * 2));
+        const bgX = absX - shaderPadding - this._glassExpand;
+        const bgY = absY - shaderPadding - this._glassExpand;
 
         if (this._lastBgW !== bgW || this._lastBgH !== bgH ||
             this._lastBgX !== bgX || this._lastBgY !== bgY) {
