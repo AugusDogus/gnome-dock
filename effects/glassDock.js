@@ -67,6 +67,9 @@ export class GlassDock {
         this._lastBgY = undefined;
         this._lastBaseW = undefined;
         this._lastBaseH = undefined;
+        this._prevFrameBaseW = undefined;
+        this._stableGlassH = undefined;
+        this._stableGlassAbsY = undefined;
 
         this._marginValue = 0;
         this._dashBackgroundHidden = false;
@@ -212,6 +215,19 @@ export class GlassDock {
 
     _watch(object, signal, callback) {
         this._objectSignals.push([object, object.connect(signal, callback)]);
+    }
+
+    _getActorGeometrySize(actor) {
+        if (!actor)
+            return [0, 0];
+
+        try {
+            const box = actor.get_allocation_box();
+            if (box)
+                return [box.x2 - box.x1, box.y2 - box.y1];
+        } catch {}
+
+        return actor.get_size();
     }
 
     _ensureStacked() {
@@ -363,6 +379,9 @@ export class GlassDock {
 
         this._ensureStacked();
 
+        let debugGapInfo = null;
+        let heldStableHeight = false;
+
         let sourceActor = this._targetActor;
         for (const child of this._targetActor.get_children()) {
             if (child.has_style_class_name('dash-background')) {
@@ -372,14 +391,14 @@ export class GlassDock {
             }
         }
 
-        let [baseW, baseH] = sourceActor.get_size();
+        let [baseW, baseH] = this._getActorGeometrySize(sourceActor);
         let [absX, absY] = sourceActor.get_transformed_position();
         if (Number.isNaN(absX) || Number.isNaN(absY))
             return;
 
         if (sourceActor !== this._targetActor) {
             const [tX, tY] = this._targetActor.get_transformed_position();
-            const [tW, tH] = this._targetActor.get_size();
+            const [tW, tH] = this._getActorGeometrySize(this._targetActor);
 
             if (absX < tX) {
                 baseW -= (tX - absX);
@@ -420,80 +439,124 @@ export class GlassDock {
                 distLeftCenter, distRightCenter, distTopCenter, distBottomCenter);
         }
 
-        if (this._lastBaseW !== undefined && this._lastBaseH !== undefined) {
-            const isHorizontalDock = (minCenterDist === distTopCenter ||
-                minCenterDist === distBottomCenter);
+        const isHorizontalDock = (minCenterDist === distTopCenter ||
+            minCenterDist === distBottomCenter);
+        const widthDelta = this._prevFrameBaseW === undefined
+            ? null
+            : baseW - this._prevFrameBaseW;
+        const widthChanged = widthDelta !== null && Math.abs(widthDelta) > 0.5;
+        const widthAnimating = this._prevFrameBaseW !== undefined &&
+            Math.abs(baseW - this._prevFrameBaseW) > 2;
+        const [, targetH] = this._getActorGeometrySize(this._targetActor);
+        const thinSourceDuringHorizontalTransition = isHorizontalDock &&
+            targetH > 0 && baseH < targetH * 0.5;
+        const protectHorizontalHeight = isHorizontalDock &&
+            this._stableGlassH !== undefined &&
+            (widthChanged || thinSourceDuringHorizontalTransition);
 
-            if (isHorizontalDock) {
-                if (Math.abs(Math.abs(baseH - this._lastBaseH) - this._marginValue) <= 1)
-                    baseH = this._lastBaseH;
-            } else {
-                if (Math.abs(Math.abs(baseW - this._lastBaseW) - this._marginValue) <= 1)
-                    baseW = this._lastBaseW;
-            }
-        }
-        this._lastBaseW = baseW;
-        this._lastBaseH = baseH;
-
-        const refActor = this._findReferenceActor(this._targetActor);
-        if (refActor) {
-            const [refW, refH] = refActor.get_size();
-            let [refX, refY] = refActor.get_transformed_position();
-
-            if (!Number.isNaN(refX) && !Number.isNaN(refY) && refW > 0 && refH > 0) {
-                let topGap = refY - absY;
-                let bottomGap = (absY + baseH) - (refY + refH);
-
-                if (topGap < 0 || bottomGap < 0) {
-                    const trueRefY = refY - refH;
-                    topGap = trueRefY - absY;
-                    bottomGap = (absY + baseH) - (trueRefY + refH);
-                }
-
-                let leftGap = refX - absX;
-                let rightGap = (absX + baseW) - (refX + refW);
-
-                if (leftGap < 0 || rightGap < 0) {
-                    const trueRefX = refX - refW;
-                    leftGap = trueRefX - absX;
-                    rightGap = (absX + baseW) - (trueRefX + refW);
-                }
-
-                if (baseW >= baseH) {
-                    const diff = Math.abs(bottomGap - topGap);
-                    if (diff > 0 && diff < baseH / 2) {
-                        if (bottomGap > topGap)
-                            baseH -= diff;
-                        else {
-                            absY += diff;
-                            baseH -= diff;
-                        }
-                    }
+        if (protectHorizontalHeight) {
+            baseH = this._stableGlassH;
+            if (this._stableGlassAbsY !== undefined)
+                absY = this._stableGlassAbsY;
+            heldStableHeight = true;
+        } else {
+            if (this._lastBaseW !== undefined && this._lastBaseH !== undefined) {
+                if (isHorizontalDock) {
+                    if (Math.abs(Math.abs(baseH - this._lastBaseH) - this._marginValue) <= 1)
+                        baseH = this._lastBaseH;
                 } else {
-                    const diff = Math.abs(rightGap - leftGap);
-                    if (diff > 0 && diff < baseW / 2) {
-                        if (minCenterDist === distLeftCenter) {
-                            if (rightGap > leftGap)
-                                baseW -= diff;
-                        } else {
-                            if (rightGap > leftGap)
-                                baseW -= diff;
+                    if (Math.abs(Math.abs(baseW - this._lastBaseW) - this._marginValue) <= 1)
+                        baseW = this._lastBaseW;
+                }
+            }
+
+            const refActor = this._findReferenceActor(this._targetActor);
+            if (refActor) {
+                const [refW, refH] = refActor.get_size();
+                let [refX, refY] = refActor.get_transformed_position();
+
+                if (!Number.isNaN(refX) && !Number.isNaN(refY) && refW > 0 && refH > 0) {
+                    let topGap = refY - absY;
+                    let bottomGap = (absY + baseH) - (refY + refH);
+
+                    if (topGap < 0 || bottomGap < 0) {
+                        const trueRefY = refY - refH;
+                        topGap = trueRefY - absY;
+                        bottomGap = (absY + baseH) - (trueRefY + refH);
+                    }
+
+                    let leftGap = refX - absX;
+                    let rightGap = (absX + baseW) - (refX + refW);
+
+                    if (leftGap < 0 || rightGap < 0) {
+                        const trueRefX = refX - refW;
+                        leftGap = trueRefX - absX;
+                        rightGap = (absX + baseW) - (trueRefX + refW);
+                    }
+
+                    if (isHorizontalDock) {
+                        const diff = Math.abs(bottomGap - topGap);
+                        if (diff > 0 && diff < baseH / 2) {
+                            debugGapInfo = {
+                                axis: 'vertical',
+                                topGap,
+                                bottomGap,
+                                diff,
+                                action: bottomGap > topGap ? 'shrink-bottom' : 'shift-down-and-shrink',
+                            };
+                            if (bottomGap > topGap)
+                                baseH -= diff;
                             else {
-                                absX += diff;
-                                baseW -= diff;
+                                absY += diff;
+                                baseH -= diff;
+                            }
+                        }
+                    } else {
+                        const diff = Math.abs(rightGap - leftGap);
+                        if (diff > 0 && diff < baseW / 2) {
+                            debugGapInfo = {
+                                axis: 'horizontal',
+                                leftGap,
+                                rightGap,
+                                diff,
+                                action: minCenterDist === distLeftCenter
+                                    ? 'left-dock-trim'
+                                    : 'right-dock-trim',
+                            };
+                            if (minCenterDist === distLeftCenter) {
+                                if (rightGap > leftGap)
+                                    baseW -= diff;
+                            } else {
+                                if (rightGap > leftGap)
+                                    baseW -= diff;
+                                else {
+                                    absX += diff;
+                                    baseW -= diff;
+                                }
                             }
                         }
                     }
                 }
             }
+
+            if (isHorizontalDock && (targetH === 0 || baseH >= targetH * 0.5)) {
+                this._stableGlassH = baseH;
+                this._stableGlassAbsY = absY;
+            }
         }
 
+        this._lastBaseW = baseW;
+        this._lastBaseH = baseH;
+        this._prevFrameBaseW = baseW;
+
+        let debugStableBaseW = null;
+        let debugStableBaseH = null;
         const marginValue = this._marginValue;
         if (monitor && marginValue > 0) {
             this._lastAbsX = absX;
             this._lastAbsY = absY;
 
-            const [tW, tH] = this._targetActor.get_size();
+            const [tW, tH] = this._getActorGeometrySize(this._targetActor);
             if (this._stableDeltaW === undefined || this._lastTW !== tW) {
                 this._stableDeltaW = baseW - tW;
                 this._lastTW = tW;
@@ -505,6 +568,8 @@ export class GlassDock {
 
             const stableBaseW = tW + this._stableDeltaW;
             const stableBaseH = tH + this._stableDeltaH;
+            debugStableBaseW = stableBaseW;
+            debugStableBaseH = stableBaseH;
 
             if (minCenterDist === distBottomCenter) {
                 const expectedBottom = monitor.y + monitor.height - marginValue;
@@ -699,6 +764,7 @@ export class GlassDock {
                 this._windowClones.delete(wActor);
             }
         }
+
     }
 
     _syncActorProperties(source, clone) {
