@@ -41,6 +41,8 @@ import {
     Utils,
 } from './imports.js';
 
+import {GlassDock} from './effects/glassDock.js';
+
 import {Extension} from './dependencies/shell/extensions/extension.js';
 
 // Use __ () and N__() for the extension gettext domain, and reuse
@@ -278,6 +280,13 @@ const DockedDash = GObject.registerClass({
         // Create a new dash object
         this.dash = new DockDash.DockDash(this.monitorIndex);
 
+        this._glassDock = new GlassDock({
+            extensionPath: DockManager.extension.path,
+            dash: this.dash,
+            dockContainer: this,
+            settings: DockManager.settings,
+        });
+
         if (Main.overview.isDummy || !settings.showShowAppsButton)
             this.dash.hideShowAppsButton();
 
@@ -400,6 +409,24 @@ const DockedDash = GObject.registerClass({
         this._slider.set_child(this._box);
         this._box.add_child(this.dash);
 
+        this._signalsHandler.add([
+            this,
+            'notify::opacity',
+            () => this._glassDock?.updateVisibility(),
+        ], [
+            this.dash,
+            'notify::opacity',
+            () => this._glassDock?.updateVisibility(),
+        ], [
+            this.dash,
+            'notify::visible',
+            () => this._glassDock?.updateVisibility(),
+        ], [
+            this.dash,
+            'notify::mapped',
+            () => this._glassDock?.onDockReady(),
+        ]);
+
         // Delay operations that require the shell to be fully loaded and with
         // user theme applied.
         if (Main.layoutManager._startingUp) {
@@ -408,6 +435,7 @@ const DockedDash = GObject.registerClass({
                     this._signalsHandler.removeWithLabel(Labels.STARTUP_ANIMATION);
                     this._trackDock();
                     this._initialize();
+                    this._glassDock?.onDockReady();
                 });
         } else {
             this._trackDock();
@@ -421,6 +449,7 @@ const DockedDash = GObject.registerClass({
                     this._signalsHandler.removeWithLabel(Labels.INITIALIZE);
                     this._initialize();
                     this.opacity = 255;
+                    this._glassDock?.onDockReady();
                 });
         }
 
@@ -455,6 +484,10 @@ const DockedDash = GObject.registerClass({
 
         // Set the initial position.
         this._resetPosition();
+
+        if (!this._glassDock?.isActive())
+            this._glassDock?.setup();
+        this._glassDock?.onDockChromeTracked();
     }
 
     _initialize() {
@@ -485,9 +518,13 @@ const DockedDash = GObject.registerClass({
             this._onOverviewShowing();
 
         this._updateAutoHideBarriers();
+        this._glassDock?.onDockReady();
     }
 
     _onDestroy() {
+        this._glassDock?.destroy();
+        this._glassDock = null;
+
         // The dash, intellihide and themeManager have global signals as well internally
         this.dash.destroy();
         this._intellihide.destroy();
@@ -751,6 +788,7 @@ const DockedDash = GObject.registerClass({
             this._ignoreHover = true;
             this._removeAnimations();
             this._animateOut(0, 0);
+            this._glassDock?.updateVisibility();
             return;
         }
 
@@ -783,6 +821,8 @@ const DockedDash = GObject.registerClass({
         } else {
             this._animateOut(settings.animationTime, 0);
         }
+
+        this._glassDock?.updateVisibility();
     }
 
     _onOverviewShowing() {
@@ -792,6 +832,7 @@ const DockedDash = GObject.registerClass({
         this._intellihide.disable();
         this._removeAnimations();
         this._animateIn(DockManager.settings.animationTime, 0);
+        this._glassDock?.updateVisibility();
     }
 
     _onOverviewHiding() {
@@ -802,6 +843,7 @@ const DockedDash = GObject.registerClass({
     _onOverviewHidden() {
         this.remove_style_class_name('overview');
         this._updateDashVisibility();
+        this._glassDock?.updateVisibility();
     }
 
     _onMenuOpened() {
@@ -1701,7 +1743,7 @@ const WorkspaceIsolation = class DashToDockWorkspaceIsolation {
 export class DockManager {
     constructor(extension) {
         if (DockManager._singleton)
-            throw new Error('DashToDock has been already initialized');
+            throw new Error('GNOME Dock has been already initialized');
         DockManager._singleton = this;
         this._extension = extension;
         this._signalsHandler = new Utils.GlobalSignalsHandler(this);
@@ -1709,7 +1751,7 @@ export class DockManager {
         this._vfuncInjections = new Utils.VFuncInjectionsHandler(this);
         this._propertyInjections = new Utils.PropertyInjectionsHandler(this);
         this._settings = this._extension.getSettings(
-            'org.gnome.shell.extensions.dash-to-dock');
+            'org.gnome.shell.extensions.gnome-dock');
         this._appSwitcherSettings = new Gio.Settings({schema_id: 'org.gnome.shell.app-switcher'});
         this._mapSettingsValues();
 

@@ -1,9 +1,9 @@
 .~
 *~
 gschemas.compiled
-dash-to-dock@micxgx.gmail.com.zip
+gnome-dock@augie.dev.zip
 *.mo
-po/dashtodock.pot
+po/gnome-dock.pot
 stylesheet.css
 Settings.ui.h
 _build

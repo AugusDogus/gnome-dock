@@ -1,5 +1,5 @@
 with import <nixpkgs> {};
 stdenv.mkDerivation {
-    name = "dash-to-dock";
+    name = "gnome-dock";
     buildInputs = [ gnumake glib sassc ];
 }

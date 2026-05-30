@@ -1,6 +1,6 @@
 # Basic Makefile
 
-UUID = dash-to-dock@micxgx.gmail.com
+UUID = gnome-dock@augie.dev
 BASE_MODULES = extension.js \
                metadata.json \
                COPYING \
@@ -20,6 +20,7 @@ EXTRA_MODULES = \
                 locations.js \
                 locationsWorker.js \
                 notificationsMonitor.js \
+                proximity.js \
                 windowPreview.js \
                 intellihide.js \
                 prefs.js \
@@ -27,7 +28,6 @@ EXTRA_MODULES = \
                 utils.js \
                 dbusmenuUtils.js \
                 desktopIconsIntegration.js \
-                Settings.ui \
                 $(NULL)
 
 EXTRA_MEDIA = logo.svg \
@@ -45,7 +45,7 @@ else
 	SHARE_PREFIX = $(DESTDIR)/usr/share
 	INSTALLBASE = $(SHARE_PREFIX)/gnome-shell/extensions
 endif
-INSTALLNAME = dash-to-dock@micxgx.gmail.com
+INSTALLNAME = gnome-dock@augie.dev
 
 # The command line passed variable VERSION is used to set the version string
 # in the metadata and in the generated zip-file. If no VERSION is passed, the
@@ -67,18 +67,18 @@ clean:
 
 extension: ./schemas/gschemas.compiled ./stylesheet.css $(MSGSRC:.po=.mo)
 
-./schemas/gschemas.compiled: ./schemas/org.gnome.shell.extensions.dash-to-dock.gschema.xml
+./schemas/gschemas.compiled: ./schemas/org.gnome.shell.extensions.gnome-dock.gschema.xml
 	glib-compile-schemas ./schemas/
 
-potfile: ./po/dashtodock.pot
+potfile: ./po/gnome-dock.pot
 
 mergepo: potfile
 	for l in $(MSGSRC); do \
-		msgmerge -U $$l ./po/dashtodock.pot; \
+		msgmerge -U $$l ./po/gnome-dock.pot; \
 	done;
 
-./po/dashtodock.pot: ./po/POTFILES.in
-	xgettext --keyword=__ --keyword=N__ --add-comments='Translators:' -o po/dashtodock.pot --package-name "Dash to Dock" --from-code=utf-8 --files-from=$<
+./po/gnome-dock.pot: ./po/POTFILES.in
+	xgettext --keyword=__ --keyword=N__ --add-comments='Translators:' -o po/gnome-dock.pot --package-name "GNOME Dock" --from-code=utf-8 --files-from=$<
 
 ./po/%.mo: ./po/%.po
 	msgfmt -c $< -o $@
@@ -97,8 +97,8 @@ endif
 install: install-local
 
 install-local: _build
-	rm -rf $(INSTALLBASE)/$(INSTALLNAME)
 	mkdir -p $(INSTALLBASE)/$(INSTALLNAME)
+	find $(INSTALLBASE)/$(INSTALLNAME) -mindepth 1 -delete
 	cp -r ./_build/* $(INSTALLBASE)/$(INSTALLNAME)/
 ifeq ($(INSTALLTYPE),system)
 	# system-wide settings and locale files
@@ -121,6 +121,7 @@ _build: all
 	-rm -fR ./_build
 	mkdir -p _build
 	cp $(BASE_MODULES) $(EXTRA_MODULES) _build
+	cp -a effects _build
 	cp -a dependencies _build
 	cp stylesheet.css _build
 	mkdir -p _build/media
@@ -132,7 +133,7 @@ _build: all
 		lf=_build/locale/`basename $$l .mo`; \
 		mkdir -p $$lf; \
 		mkdir -p $$lf/LC_MESSAGES; \
-		cp $$l $$lf/LC_MESSAGES/dashtodock.mo; \
+		cp $$l $$lf/LC_MESSAGES/gnome-dock.mo; \
 	done;
 	sed -i 's/"version": -1/"version": "$(VERSION)"/'  _build/metadata.json;
 

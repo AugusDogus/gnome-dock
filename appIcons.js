@@ -1556,8 +1556,7 @@ export const DockShowAppsIcon = GObject.registerClass({
 class DockShowAppsIconMenu extends DockAppIconMenu {
     _rebuildMenu() {
         this.removeAll();
-
-        this.addMenuItem(new PopupMenu.PopupSeparatorMenuItem(__('Dash to Dock')));
+        this.addMenuItem(new PopupMenu.PopupSeparatorMenuItem(__('GNOME Dock')));
 
         const item = this._appendMenuItem(_('Settings'));
         item.connect('activate', () =>
@@ -1572,7 +1571,7 @@ export function itemShowLabel() {
     /* eslint-disable no-invalid-this */
     // Check if the label is still present at all. When switching workspace, the
     // item might have been destroyed in between.
-    if (!this._labelText || !this.label.get_stage())
+    if (!this._labelText || !this.label || !this.label.get_stage())
         return;
 
     this.label.set_text(this._labelText);

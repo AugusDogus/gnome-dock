@@ -13,8 +13,6 @@ $_dark_base_color: darken(desaturate(#241f31, 100%), 2%);
 $base_color: if($variant =='light', #fff, $_dark_base_color);
 $system_bg_color: $base_color;
 
-$remark_color: rgba(238, 238, 238, 0.2);
-
 // From https://gitlab.gnome.org/GNOME/gnome-shell/-/blob/43.0/data/theme/gnome-shell-sass/widgets/_dash.scss
 $dash_background_color: lighten($system_bg_color, 5%);
 $dash_placeholder_size: 32px;
@@ -224,9 +222,6 @@ $dock_style_modes: null, shrink, extended, extended-shrink;
                     &.running .overview-icon {
                         background-image: none;
                     }
-                    &.focused .overview-icon {
-                        background-color: $remark_color;
-                    }
 
                     .app-well-app-running-dot,
                     .app-grid-running-dot {
@@ -260,14 +255,21 @@ $dock_style_modes: null, shrink, extended, extended-shrink;
 }
 
 .dash-item-container .overview-tile .overview-icon,
-.dash-item-container .show-apps .overview-icon {
-    background-color: rgba(255,255,255,0);
-}
-
+.dash-item-container .show-apps .overview-icon,
+.dash-item-container .app-well-app .overview-icon,
 .dash-item-container .overview-tile:hover .overview-icon,
 .dash-item-container .overview-tile.focused .overview-icon,
-.dash-item-container .show-apps:hover .overview-icon {
-    background-color: $remark_color;
+.dash-item-container .show-apps:hover .overview-icon,
+.dash-item-container .show-apps.focused .overview-icon,
+.dash-item-container .app-well-app:hover .overview-icon,
+.dash-item-container .app-well-app.focused .overview-icon,
+.dash-item-container .app-well-app.running .overview-icon,
+.dash-item-container .app-well-app.running.focused .overview-icon,
+.dash-item-container .overview-tile.running .overview-icon,
+.dash-item-container .overview-tile.running.focused .overview-icon {
+    background-color: transparent;
+    background-image: none;
+    box-shadow: none;
 }
 
 .dash-item-container .overview-tile .app-grid-running-dot {
@@ -499,16 +501,59 @@ $dock_style_modes: null, shrink, extended, extended-shrink;
 
 @for $i from 2 through 4 {
     #dashtodockContainer.bottom .metro.running#{$i}.focused,
-    #dashtodockContainer.top .metro.running#{$i}.focused {
-        background-image: url("./media/highlight_stacked_bg.svg");
-        background-position: 0px 0px;
-        background-size: contain;
-    }
-
+    #dashtodockContainer.top .metro.running#{$i}.focused,
     #dashtodockContainer.left .metro.running#{$i}.focused,
     #dashtodockContainer.right .metro.running#{$i}.focused {
-        background-image: url("./media/highlight_stacked_bg_h.svg");
-        background-position: 0px 0px;
-        background-size: contain;
+        background-image: none;
+        background-color: transparent;
+        box-shadow: none;
     }
 }
+
+/* GNOME Dock — liquid glass styling (bottom dock). */
+$gd_accent: rgba(182, 166, 255, 0.95);
+
+#dashtodockContainer.bottom #dash .dash-background {
+    background: transparent;
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 4px 10px;
+}
+
+#dashtodockContainer.bottom #dashtodockBoxContainer {
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+#dashtodockContainer.bottom .dash-item-container .overview-icon {
+    border-radius: 12px;
+    transition-duration: 180ms;
+}
+
+#dashtodockContainer.bottom .app-well-app-running-dot,
+#dashtodockContainer.bottom .app-grid-running-dot {
+    background-color: $gd_accent;
+    border-radius: 3px;
+    height: 3px;
+    width: 14px;
+    margin-bottom: 3px;
+}
+
+/* Kill the scrollview edge fade so it never paints a dark gradient over the
+ * end icons, especially when the icons are translated by proximity. */
+#dashtodockContainer.bottom #dashtodockDashScrollview,
+#dashtodockContainer.top #dashtodockDashScrollview {
+    -st-hfade-offset: 0;
+}
+
+#dashtodockContainer.left #dashtodockDashScrollview,
+#dashtodockContainer.right #dashtodockDashScrollview {
+    -st-vfade-offset: 0;
+}
+
+.dashtodock-app-well-preview-menu-item {
+    border-radius: 12px;
+    margin: 2px;
+}
+

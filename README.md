@@ -1,5 +1,6 @@
-# Dash to Dock
-![screenshot](https://github.com/micheleg/dash-to-dock/raw/master/media/screenshot.jpg)
+# GNOME Dock
+
+GNOME Dock is a personal GNOME Shell dock fork based on Dash to Dock.
 
 ## A dock for the GNOME Shell
 This extension enhances the dash moving it out of the overview and transforming it in a dock for an easier launching of applications and a faster switching between windows and desktops without having to leave the desktop view.

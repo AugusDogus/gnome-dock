@@ -6,7 +6,7 @@ import {Extension} from './dependencies/shell/extensions/extension.js';
 // We export this so it can be accessed by other extensions
 export let dockManager;
 
-export default class DashToDockExtension extends Extension.Extension {
+export default class GnomeDockExtension extends Extension.Extension {
     enable() {
         dockManager = new DockManager(this);
     }

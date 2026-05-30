@@ -24,6 +24,7 @@ import {
 import {
     AppIcons,
     Docking,
+    Proximity,
     Theming,
     Utils,
 } from './imports.js';
@@ -140,7 +141,8 @@ export const DockDash = GObject.registerClass({
         // Initialize icon variables and size
         super._init({
             name: 'dash',
-            offscreen_redirect: Clutter.OffscreenRedirect.ALWAYS,
+            offscreen_redirect: Clutter.OffscreenRedirect.AUTOMATIC_FOR_OPACITY,
+            clip_to_allocation: false,
             layout_manager: new Clutter.BinLayout(),
         });
 
@@ -182,6 +184,7 @@ export const DockDash = GObject.registerClass({
             x_expand: this._isHorizontal,
             y_expand: !this._isHorizontal,
             enable_mouse_scrolling: false,
+            clip_to_allocation: false,
         });
 
         this._scrollView.connect('scroll-event', this._onScrollEvent.bind(this));
@@ -191,6 +194,7 @@ export const DockDash = GObject.registerClass({
             x_align: Clutter.ActorAlign.FILL,
             y_align: Clutter.ActorAlign.FILL,
             vertical: !this._isHorizontal,
+            clip_to_allocation: false,
         });
         this._boxContainer.add_style_class_name(Theming.PositionStyleClass[this._position]);
 
@@ -230,6 +234,7 @@ export const DockDash = GObject.registerClass({
             style_class: 'dash-background',
             y_expand: this._isHorizontal,
             x_expand: !this._isHorizontal,
+            clip_to_allocation: true,
         });
 
         const sizerBox = new Clutter.Actor();
@@ -297,6 +302,11 @@ export const DockDash = GObject.registerClass({
             this._onWindowDragEnd.bind(this),
         ]);
 
+        this._proximity = new Proximity.ProximityEffect(this._box, {
+            horizontal: this._isHorizontal,
+        });
+        this._proximity.enable();
+
         this.connect('destroy', this._onDestroy.bind(this));
     }
 
@@ -320,7 +330,13 @@ export const DockDash = GObject.registerClass({
         return this._dashContainer;
     }
 
+    _applyBackgroundSettings() {
+        // Glass settings are owned by DashToDock._glassDock (docking.js).
+    }
+
     _onDestroy() {
+        this._proximity?.disable();
+        this._proximity = null;
         this.iconAnimator.destroy();
 
         if (this._requiresVisibilityTimeout) {

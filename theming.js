@@ -252,53 +252,14 @@ export class ThemeManager {
     _adjustTheme() {
         const {settings} = Docking.DockManager;
 
-        // Remove prior style edits
+        // Frosted glass owns dash-background visibility during sync; CSS stays fill-free.
         this._dash._background.set_style(null);
         this._transparency.disable();
 
-        // If built-in theme is enabled do nothing else
         if (settings.applyCustomTheme)
             return;
 
-        let newStyle = '';
-        const position = Utils.getPosition(settings);
-
-        // obtain theme border settings
-        const themeNode = this._dash._background.get_theme_node();
-        const borderColor = themeNode.get_border_color(St.Side.TOP);
-        const borderWidth = themeNode.get_border_width(St.Side.TOP);
-
-        // We're copying border and corner styles to left border and top-left
-        // corner, also removing bottom border and bottom-right corner styles
-        let borderMissingStyle = '';
-
-        if (this._rtl && (position !== St.Side.RIGHT)) {
-            borderMissingStyle = `border-right: ${borderWidth}px solid ${
-                borderColor.to_string()};`;
-        } else if (!this._rtl && (position !== St.Side.LEFT)) {
-            borderMissingStyle = `border-left: ${borderWidth}px solid ${
-                borderColor.to_string()};`;
-        }
-
-        newStyle = borderMissingStyle;
-
-        if (newStyle) {
-            // I do call set_style possibly twice so that only the background gets the transition.
-            // The transition-property css rules seems to be unsupported
-            this._dash._background.set_style(newStyle);
-        }
-
-        // Customize background
-        const fixedTransparency = settings.transparencyMode === TransparencyMode.FIXED;
-        const defaultTransparency = settings.transparencyMode === TransparencyMode.DEFAULT;
-        if (!defaultTransparency && !fixedTransparency) {
-            this._transparency.enable();
-        } else if (!defaultTransparency || settings.customBackgroundColor) {
-            newStyle = `${newStyle}background-color:${this._customizedBackground}; ` +
-                       `border-color:${this._customizedBorder}; ` +
-                       'transition-delay: 0s; transition-duration: 0.250s;';
-            this._dash._background.set_style(newStyle);
-        }
+        this._actor._glassDock?.applySettings();
     }
 
     _bindSettingsChanges() {
