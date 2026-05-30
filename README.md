@@ -1,23 +1,18 @@
 # GNOME Dock
 
-GNOME Dock is a personal GNOME Shell dock fork based on Dash to Dock.
+GNOME Dock is a standalone GNOME Shell dock descended from [Dash to Dock](https://github.com/micheleg/dash-to-dock), with a focus on a floating bottom-dock workflow and custom frosted-glass squircle visuals.
 
-## A dock for the GNOME Shell
-This extension enhances the dash moving it out of the overview and transforming it in a dock for an easier launching of applications and a faster switching between windows and desktops without having to leave the desktop view.
-
-[<img src="https://micheleg.github.io/dash-to-dock/media/get-it-on-ego.png" height="100">](https://extensions.gnome.org/extension/307/dash-to-dock)
-
-For additional installation instructions and more information visit [https://micheleg.github.io/dash-to-dock/](https://micheleg.github.io/dash-to-dock/).
+It moves the dash out of the overview and turns it into a dock for easier application launching and faster switching between windows and desktops without leaving the desktop view.
 
 ## Installation from source
 
-The extension can be installed directly from source, either for the convenience of using git or to test the latest development version. Clone the desired branch with git
+The extension can be installed directly from source, either for the convenience of using git or to test the latest development version.
 
 ### Build Dependencies
 
-To compile the stylesheet you'll need an implementation of SASS. Dash to Dock supports `dart-sass` (`sass`), `sassc`, and `ruby-sass`. Every distro should have at least one of these implementations, we recommend using `dart-sass` (`sass`) or `sassc` over `ruby-sass` as `ruby-sass` is deprecated.
+To compile the stylesheet you'll need an implementation of SASS. GNOME Dock supports `dart-sass` (`sass`), `sassc`, and `ruby-sass`. Every distro should have at least one of these implementations; we recommend using `dart-sass` (`sass`) or `sassc` over `ruby-sass`, as `ruby-sass` is deprecated.
 
-By default, Dash to Dock will attempt to build with `sassc`. To change this behavior set the `SASS` environment variable to either `dart` or `ruby`.
+By default, the build will attempt to use `sassc`. To change this behavior set the `SASS` environment variable to either `dart` or `ruby`.
 
 ```bash
 export SASS=dart
@@ -27,14 +22,14 @@ export SASS=ruby
 
 ### Building
 
-Clone the repository or download the branch from github. A simple Makefile is included.
-
-Next use `make` to install the extension into your home directory. A Shell reload is required <kbd>Alt</kbd> + <kbd>F2</kbd> <kbd>r</kbd> <kbd>Enter</kbd> under Xorg or under Wayland you may have to logout and login. The extension has to be enabled  with *gnome-extensions-app* (GNOME Extensions) or with *dconf*.
+Clone the repository and use the included Makefile to install the extension into your home directory.
 
 ```bash
-git clone https://github.com/micheleg/dash-to-dock.git
-make -C dash-to-dock install
+git clone https://github.com/AugusDogus/gnome-dock.git
+make -C gnome-dock install
 ```
+
+A Shell reload is required: <kbd>Alt</kbd> + <kbd>F2</kbd> <kbd>r</kbd> <kbd>Enter</kbd> under Xorg, or under Wayland you may have to log out and log back in. The extension then has to be enabled with *GNOME Extensions* or with *dconf*.
 
 If `msgfmt` is not available on your system, you will see an error message like the following:
 
@@ -44,11 +39,14 @@ make: msgfmt: No such file or directory
 
 In this case install the `gettext` package from your distribution's repository.
 
-
 ## Bug Reporting
 
-Bugs should be reported to the Github bug tracker [https://github.com/micheleg/dash-to-dock/issues](https://github.com/micheleg/dash-to-dock/issues).
+Bugs should be reported to the GitHub bug tracker [https://github.com/AugusDogus/gnome-dock/issues](https://github.com/AugusDogus/gnome-dock/issues).
+
+## Credits
+
+GNOME Dock descends from [Dash to Dock](https://github.com/micheleg/dash-to-dock) by Michele Gaio and contributors. Much of the original dock infrastructure originates from that project, and this fork would not exist without their work.
 
 ## License
-Dash to Dock Gnome Shell extension is distributed under the terms of the GNU General Public License,
-version 2 or later. See the COPYING file for details.
+
+GNOME Dock is distributed under the terms of the GNU General Public License, version 2 or later. See the COPYING file for details.
