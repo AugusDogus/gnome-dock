@@ -21,8 +21,6 @@ const DEFAULTS = {
     displacementScale: 45.0,
     ior: 1.5,
     chromaStrength: 0.006,
-    rimWidth: 4.0,
-    lightAngleDeg: 50.0,
 };
 
 /* ------------------------------------------------------------------------- *
@@ -147,8 +145,6 @@ export const GlassEffect = GObject.registerClass({
         this._setFloat('displacement_scale', DEFAULTS.displacementScale);
         this._setFloat('ior', DEFAULTS.ior);
         this._setFloat('chroma_strength', DEFAULTS.chromaStrength);
-        this._setFloat('rim_width', DEFAULTS.rimWidth);
-        this._setFloat('light_angle_deg', DEFAULTS.lightAngleDeg);
 
         this._applyCornerParams();
 

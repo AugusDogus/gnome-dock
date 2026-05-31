@@ -34,10 +34,6 @@ uniform float displacement_scale;  // strength of the refraction distortion
 uniform float ior;                 // index of refraction
 uniform float chroma_strength;     // chromatic aberration
 
-// Lighting / reflection.
-uniform float rim_width;
-uniform float light_angle_deg;
-
 // Lisse corner parameters (pixels), computed JS-side from radius + smoothing.
 uniform float radius;
 uniform float p_ext;
@@ -362,74 +358,27 @@ void main() {
     vec3 tintColor = mix(vec3(1.0), vec3(0.10, 0.10, 0.11), dark_tint);
     float tintStrength = mix(0.15, 0.45, dark_tint);
     vec3 insideBaseColor = mix(refracted, tintColor, tintStrength);
-    vec3 baseColor = insideBaseColor * insideMask;
+    // Thin hairline outline, replacing the bevel/rim lighting. A crisp,
+    // semi-transparent dark stroke tracks the Lisse silhouette just inside the
+    // edge, so the dock reads as a clean outlined panel rather than a lit bevel.
+    // The interior refraction + tint above is left untouched. The line is
+    // centered slightly inside the boundary so it stays fully opaque rather than
+    // being eaten by the antialiased alpha falloff at dMask = 0.
+    // No solid core (outlineHalf = 0): the line is a triangular falloff peaking
+    // on one contour, so it stays a hairline. The feather is the antialiasing
+    // span; because dMask is a true unit-gradient distance field, ~1.25 SDF
+    // units is ~1.25px of real AA, enough to smooth the curve without a
+    // screen-space derivative (fwidth), which this Cogl context may not support.
+    float outlineCenter = 1.0;       // px inside the silhouette edge
+    float outlineHalf = 0.0;         // no solid core: a hairline
+    float outlineFeather = 1.25;     // antialiasing span in px
+    vec3 outlineColor = vec3(0.5);   // mid-gray hairline
+    float outlineOpacity = 0.5;
+    float dEdge = abs(-dMask - outlineCenter);
+    float outline = 1.0 - smoothstep(outlineHalf, outlineHalf + outlineFeather, dEdge);
 
-    // Edge reflection / specular. This follows liquid-dom's model more than the
-    // earlier GNOME reference: the edge color mostly comes from a nearby sampled
-    // backdrop reflection. A tiny white specular remains, but only when that
-    // reflected sample is bright enough to justify it. On black backgrounds this
-    // avoids inventing a neon rim; on detailed/light backgrounds it preserves
-    // the reflective break that sells the glass.
-    float lightAngleRad = radians(light_angle_deg);
-    vec2 lightDir = normalize(vec2(cos(lightAngleRad), sin(lightAngleRad)));
+    vec3 color = mix(insideBaseColor, outlineColor, outline * outlineOpacity);
+    color *= insideMask;
 
-    // SDF gradient via 1px finite differences. Its direction is the rim normal;
-    // its length is the SDF's units-per-pixel. Dividing the SDF distance by that
-    // is liquid-dom's specularDistanceUnitsPerPx = length(vec2(dpdx(d), dpdy(d)))
-    // expressed without GLSL screen-space derivatives, so the specular band
-    // stays a constant screen-pixel width instead of stretching where the field
-    // is smooth or the dock is rendered at a fractional/HiDPI scale.
-    float eps = 1.0;
-    vec2 sdfGrad = vec2(
-        sdRoundRect(local_pos + vec2(eps, 0.0), box_size, corner_radius) -
-            sdRoundRect(local_pos - vec2(eps, 0.0), box_size, corner_radius),
-        sdRoundRect(local_pos + vec2(0.0, eps), box_size, corner_radius) -
-            sdRoundRect(local_pos - vec2(0.0, eps), box_size, corner_radius)
-    ) / (2.0 * eps);
-    vec2 rimNormal = normalize(sdfGrad + vec2(1e-6));
-    float specularDistanceUnitsPerPx = max(length(sdfGrad), 0.25);
-
-    float specularDistancePx = dSurf / specularDistanceUnitsPerPx;
-    float specularInwardDistancePx = max(-specularDistancePx, 0.0);
-    float rimWidthPx = max(rim_width, 0.0001);
-    float specularOuterMask = 1.0 - smoothstep(0.0, 1.0, specularDistancePx);
-    float specularInnerMask = 1.0 - smoothstep(rimWidthPx, rimWidthPx + 1.0,
-        specularInwardDistancePx);
-    float rimBandMask = specularOuterMask * specularInnerMask * insideMask;
-
-    float reflectionOffset = 18.0;
-    vec2 reflectedUv = stabilizedUV(uv + rimNormal * reflectionOffset / resolution, uv);
-    vec3 reflectedColor = texture2D(cogl_sampler, SAFE(reflectedUv)).rgb;
-    float reflectedLuma = dot(reflectedColor, vec3(0.2126, 0.7152, 0.0722));
-    float refractedLuma = dot(refracted, vec3(0.2126, 0.7152, 0.0722));
-
-    float reflectionPresence = smoothstep(0.20, 0.85, reflectedLuma);
-    float refractionAcceptance = 1.0 - smoothstep(0.35, 0.85, refractedLuma);
-    float reflectionBlend = reflectionPresence * refractionAcceptance;
-    vec3 edgeSpecularColor = mix(refracted, reflectedColor, reflectionBlend);
-
-    // Two-sided rim lighting, matching liquid-dom: a primary highlight on the
-    // rim facing the light plus a weaker one on the opposite rim. liquid-dom
-    // drives BOTH the colored edge and the white specular from this combined
-    // (primary + opposite) term, so the glint is never stuck on a single
-    // corner. The perpendicular edges still fall off naturally via the dot().
-    float primaryStrength = 1.0;
-    float oppositeStrength = 0.5;
-    float rimSpecular = pow(max(dot(rimNormal, lightDir), 0.0), 2.0);
-    float mirroredRimSpecular = pow(max(dot(rimNormal, -lightDir), 0.0), 2.0);
-    float combinedRimSpecular = rimSpecular * primaryStrength +
-        mirroredRimSpecular * oppositeStrength;
-
-    float coloredEdgeOpacity = clamp(combinedRimSpecular * rimBandMask * 0.55,
-        0.0, 1.0);
-
-    float whiteSpecular = rimBandMask * combinedRimSpecular * 0.08 *
-        reflectionPresence;
-
-    float alpha = insideMask;
-    vec3 litColor = mix(baseColor, edgeSpecularColor * insideMask, coloredEdgeOpacity);
-    litColor += vec3(whiteSpecular);
-    litColor = clamp(litColor, 0.0, 1.0);
-
-    cogl_color_out = vec4(litColor, alpha) * cogl_color_in;
+    cogl_color_out = vec4(color, insideMask) * cogl_color_in;
 }
