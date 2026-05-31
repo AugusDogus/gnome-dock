@@ -29,7 +29,7 @@ git clone https://github.com/AugusDogus/gnome-dock.git
 make -C gnome-dock install
 ```
 
-A Shell reload is required: <kbd>Alt</kbd> + <kbd>F2</kbd> <kbd>r</kbd> <kbd>Enter</kbd> under Xorg, or under Wayland you may have to log out and log back in. The extension then has to be enabled with *GNOME Extensions* or with *dconf*.
+A Shell reload is required: <kbd>Alt</kbd> + <kbd>F2</kbd> <kbd>r</kbd> <kbd>Enter</kbd> under Xorg, or under Wayland you may have to log out and log back in. The extension then has to be enabled with _GNOME Extensions_ or with _dconf_.
 
 If `msgfmt` is not available on your system, you will see an error message like the following:
 
@@ -46,6 +46,8 @@ Bugs should be reported to the GitHub bug tracker [https://github.com/AugusDogus
 ## Credits
 
 GNOME Dock descends from [Dash to Dock](https://github.com/micheleg/dash-to-dock) by Michele Gaio and contributors. Much of the original dock infrastructure originates from that project, and this fork would not exist without their work.
+
+The dock's squircle corner math is derived from [Lisse](https://github.com/JaceThings/Lisse) by Jace.
 
 ## License
 
