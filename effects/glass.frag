@@ -17,6 +17,14 @@ uniform float tint_b;
 uniform float padding;
 uniform float isDock;
 
+// Legibility controls: backdrop saturation boost, inner-rim highlight, and a
+// soft outer drop shadow painted into the transparent padding. Together these
+// give the slab a defined edge on both dark and light backgrounds, so a single
+// static tint reads on either.
+uniform float saturation;
+uniform float highlight_strength;
+uniform float shadow_strength;
+
 // Lisse corner parameters (pixels), computed JS-side from radius + smoothing.
 uniform float radius;
 uniform float p_ext;
@@ -179,9 +187,31 @@ void main() {
     float d = sdSquircle(local_pos, box_size);
     float insideMask = smoothstep(edgeFeather, -edgeFeather, d);
 
+    // Oversaturate the backdrop so colors read through the glass instead of
+    // washing out to gray. saturation == 1.0 is a no-op.
     vec3 blurred = texture2D(cogl_sampler, uv).rgb;
-    vec3 tintColor = vec3(tint_r, tint_g, tint_b);
-    vec3 color = mix(blurred, tintColor, tint_strength);
+    float luma = dot(blurred, vec3(0.2126, 0.7152, 0.0722));
+    blurred = clamp(mix(vec3(luma), blurred, saturation), 0.0, 1.0);
 
-    cogl_color_out = vec4(color * insideMask, insideMask) * cogl_color_in;
+    vec3 tintColor = vec3(tint_r, tint_g, tint_b);
+    vec3 bodyColor = mix(blurred, tintColor, tint_strength);
+
+    // Inner-rim highlight: a thin bright line hugging the inside edge. This is
+    // what separates the panel from a dark background.
+    float rimWidth = edgeFeather + 2.0;
+    float rim = insideMask * smoothstep(-rimWidth, 0.0, d);
+    bodyColor = mix(bodyColor, vec3(1.0), rim * highlight_strength);
+
+    // Outer drop shadow: a soft dark halo in the positive-distance padding
+    // region (currently fully transparent). This separates the panel from a
+    // light background. Shadow color is black, so it adds no premultiplied RGB.
+    float shadowWidth = max(padding - 4.0, 1.0);
+    float shadowAlpha = shadow_strength *
+        smoothstep(shadowWidth, 0.0, d) * (1.0 - insideMask);
+
+    // Premultiplied over-composite of the glass body atop the shadow.
+    float outAlpha = insideMask + shadowAlpha * (1.0 - insideMask);
+    vec3 outColor = bodyColor * insideMask;
+
+    cogl_color_out = vec4(outColor, outAlpha) * cogl_color_in;
 }

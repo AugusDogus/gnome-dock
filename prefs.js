@@ -85,12 +85,21 @@ export default class GnomeDockPreferences extends ExtensionPreferences {
 
         const group = new Adw.PreferencesGroup({
             title: 'Frosted glass',
-            description: 'Blur and tint only — tune live, then we bake in what you like.',
+            description: 'Blur, tint, and edge treatment — tune live, then we bake in what you like.',
         });
         group.add(makeIntSlider(settings, 'gd-glass-blur',
             'Blur', 'Background blur strength (0–100).'));
         group.add(makeDoubleSlider(settings, 'gd-glass-tint-strength',
             'Tint strength', 'Dark overlay on the glass (0–1).',
+            {lower: 0, upper: 1, step: 0.01, digits: 2}));
+        group.add(makeDoubleSlider(settings, 'gd-glass-saturation',
+            'Saturation', 'Backdrop color boost (1.0 = unchanged).',
+            {lower: 0, upper: 2, step: 0.05, digits: 2}));
+        group.add(makeDoubleSlider(settings, 'gd-glass-highlight-strength',
+            'Edge highlight', 'Inner rim glow — pops on dark backgrounds (0–1).',
+            {lower: 0, upper: 1, step: 0.01, digits: 2}));
+        group.add(makeDoubleSlider(settings, 'gd-glass-shadow-strength',
+            'Drop shadow', 'Outer halo — pops on light backgrounds (0–1).',
             {lower: 0, upper: 1, step: 0.01, digits: 2}));
         group.add(makeIntSlider(settings, 'gd-glass-corner-radius',
             'Corner radius', 'Pill corner radius in logical pixels.',

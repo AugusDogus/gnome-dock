@@ -143,6 +143,9 @@ export const GlassEffect = GObject.registerClass({
         this._setFloat('tint_r', 0.08);
         this._setFloat('tint_g', 0.08);
         this._setFloat('tint_b', 0.09);
+        this._setFloat('saturation', 1.3);
+        this._setFloat('highlight_strength', 0.07);
+        this._setFloat('shadow_strength', 0.1);
         this._applyCornerParams();
 
         if (this._settings)
@@ -200,6 +203,9 @@ export const GlassEffect = GObject.registerClass({
         };
 
         bindDouble('gd-glass-tint-strength', 'tint_strength');
+        bindDouble('gd-glass-saturation', 'saturation');
+        bindDouble('gd-glass-highlight-strength', 'highlight_strength');
+        bindDouble('gd-glass-shadow-strength', 'shadow_strength');
 
         const applyTint = () => {
             const [r, g, b] = hexToRgb(s.get_string('gd-glass-tint-color'));
