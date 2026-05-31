@@ -1,18 +1,71 @@
-# GNOME Dock
+<div align="center">
+    <br/>
+    <p>
+        <img src="media/logo.svg"
+            title="GNOME Dock" alt="GNOME Dock logo" width="120" />
+        <h1>GNOME Dock</h1>
+    </p>
+    <p width="120">
+        A standalone GNOME Shell dock tuned for a floating bottom-dock workflow and frosted-glass squircle visuals.
+    </p>
+    <video width="1460" height="1016" title="GNOME Dock" src="https://github.com/user-attachments/assets/5add573c-6b99-4a71-91e4-a586fc996ecd"></video>
+</div>
 
-GNOME Dock is a standalone GNOME Shell dock descended from [Dash to Dock](https://github.com/micheleg/dash-to-dock), with a focus on a floating bottom-dock workflow and custom frosted-glass squircle visuals.
+## Tech Stack
 
-It moves the dash out of the overview and turns it into a dock for easier application launching and faster switching between windows and desktops without leaving the desktop view.
+- [GNOME Shell](https://gitlab.gnome.org/GNOME/gnome-shell) extension platform
+- [GJS](https://gjs.guide/) for extension logic
+- GNOME Shell UI libraries: `Clutter`, `St`, `Meta`, and `Shell`
+- GLSL fragment shaders for the frosted-glass squircle mask
+- SASS (`sassc`, `dart-sass`, or `ruby-sass`) for stylesheet compilation
+- GNU Make for build, packaging, and installation
+- gettext for translations
 
-## Installation from source
+## Project Structure
 
-The extension can be installed directly from source, either for the convenience of using git or to test the latest development version.
+The project is organized as a GNOME Shell extension with a custom glass rendering pipeline:
 
-### Build Dependencies
+```bash
+gnome-dock/
+├── extension.js          # Extension entrypoint
+├── docking.js            # Dock lifecycle and top-level integration
+├── dash.js               # Dash layout and container behavior
+├── appIcons.js           # App icon behavior, menus, and labels
+├── prefs.js              # Preferences UI
+├── AGENTS.md             # Repo guidance for coding agents and debugging workflow
+├── _stylesheet.scss      # Main stylesheet source
+├── effects/
+│   ├── glassDock.js      # Glass background actor and clone pipeline
+│   ├── glassEffect.js    # Shader effect wrapper and Lisse corner parameters
+│   ├── glass.frag        # Frosted-glass squircle fragment shader
+│   └── clutterClone.js   # Clone helpers used by the glass pipeline
+├── schemas/
+│   └── org.gnome.shell.extensions.gnome-dock.gschema.xml
+├── media/                # Logos and other extension assets
+├── po/                   # Translations
+└── dependencies/         # Shell and GI import shims
+```
 
-To compile the stylesheet you'll need an implementation of SASS. GNOME Dock supports `dart-sass` (`sass`), `sassc`, and `ruby-sass`. Every distro should have at least one of these implementations; we recommend using `dart-sass` (`sass`) or `sassc` over `ruby-sass`, as `ruby-sass` is deprecated.
+## Getting Started
 
-By default, the build will attempt to use `sassc`. To change this behavior set the `SASS` environment variable to either `dart` or `ruby`.
+### Prerequisites
+
+- GNOME Shell `45` through `50`
+- `make`
+- `glib-compile-schemas`
+- `gettext` (`msgfmt`)
+- A SASS implementation: `sassc`, `dart-sass` (`sass`), or `ruby-sass`
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/AugusDogus/gnome-dock.git
+cd gnome-dock
+```
+
+### 2. Choose a SASS Implementation (Optional)
+
+By default the build will try to use `sassc`. If you want to force another implementation:
 
 ```bash
 export SASS=dart
@@ -20,28 +73,37 @@ export SASS=dart
 export SASS=ruby
 ```
 
-### Building
-
-Clone the repository and use the included Makefile to install the extension into your home directory.
+### 3. Build and Install
 
 ```bash
-git clone https://github.com/AugusDogus/gnome-dock.git
-make -C gnome-dock install
+make install-local
 ```
 
-A Shell reload is required: <kbd>Alt</kbd> + <kbd>F2</kbd> <kbd>r</kbd> <kbd>Enter</kbd> under Xorg, or under Wayland you may have to log out and log back in. The extension then has to be enabled with _GNOME Extensions_ or with _dconf_.
-
-If `msgfmt` is not available on your system, you will see an error message like the following:
+This installs the extension into:
 
 ```bash
-make: msgfmt: No such file or directory
+~/.local/share/gnome-shell/extensions/gnome-dock@augie.dev
 ```
 
-In this case install the `gettext` package from your distribution's repository.
+### 4. Reload GNOME Shell
 
-## Bug Reporting
+- On Xorg: <kbd>Alt</kbd> + <kbd>F2</kbd>, then `r`, then <kbd>Enter</kbd>
+- On Wayland: log out and log back in if needed
 
-Bugs should be reported to the GitHub bug tracker [https://github.com/AugusDogus/gnome-dock/issues](https://github.com/AugusDogus/gnome-dock/issues).
+Then enable the extension using _GNOME Extensions_ or `gnome-extensions`.
+
+## Available Commands
+
+```bash
+make extension      # Build compiled assets
+make install-local  # Install the extension to ~/.local/share/gnome-shell/extensions
+make install        # Alias for install-local
+make zip-file       # Build a distributable zip archive
+make clean          # Remove generated build artifacts
+make mergepo        # Merge translation updates
+```
+
+Bugs should be reported at [github.com/AugusDogus/gnome-dock/issues](https://github.com/AugusDogus/gnome-dock/issues).
 
 ## Credits
 
@@ -51,4 +113,4 @@ The dock's squircle corner math is derived from [Lisse](https://github.com/JaceT
 
 ## License
 
-GNOME Dock is distributed under the terms of the GNU General Public License, version 2 or later. See the COPYING file for details.
+GNOME Dock is distributed under the terms of the GNU General Public License, version 2 or later. See the `COPYING` file for details.
