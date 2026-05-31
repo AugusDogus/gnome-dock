@@ -1,8 +1,9 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
 /*
- * Frosted glass dock — near-verbatim port of liquid-glass DashManager pipeline.
- * Geometry/clone lifecycle follows the reference; shader is frosted squircle only.
+ * Liquid glass dock — near-verbatim port of liquid-glass DashManager pipeline.
+ * Geometry/clone lifecycle follows the reference; shader keeps a Lisse squircle
+ * silhouette with hardcoded optical defaults.
  */
 
 import {Clutter, GLib, Meta, Shell, St} from '../dependencies/gi.js';
@@ -11,18 +12,8 @@ import {Main} from '../dependencies/shell/ui.js';
 import {UnpickableClone} from './clutterClone.js';
 import {GlassEffect} from './glassEffect.js';
 
-const MAX_BLUR_RADIUS = 60;
+const GLASS_BLUR_RADIUS = 8;
 const SHADER_PADDING = 20;
-
-function hexToColorArray(hex) {
-    if (!hex?.startsWith('#') || hex.length !== 7)
-        return [0.08, 0.08, 0.09];
-    return [
-        parseInt(hex.slice(1, 3), 16) / 255,
-        parseInt(hex.slice(3, 5), 16) / 255,
-        parseInt(hex.slice(5, 7), 16) / 255,
-    ];
-}
 
 export class GlassDock {
     constructor({extensionPath, dash, dockContainer, settings}) {
@@ -84,7 +75,7 @@ export class GlassDock {
             return;
         this._active = true;
 
-        log('gnome-dock: frosted glass pipeline starting');
+        log('gnome-dock: liquid glass pipeline starting');
 
         this._bindSettings();
         this._applyEffect();
@@ -96,9 +87,6 @@ export class GlassDock {
                 this._settings.connect(`changed::${key}`, callback.bind(this)));
         };
 
-        connectSetting('gd-glass-blur', () => this._applyBlurRadius());
-        connectSetting('gd-glass-tint-color', () => this._applyTintSettings());
-        connectSetting('gd-glass-tint-strength', () => this._applyTintSettings());
         connectSetting('gd-glass-corner-radius', () => {
             this._lastBgW = undefined;
         });
@@ -123,9 +111,8 @@ export class GlassDock {
         this._clipBox.set_size(1, 1);
         this._bgActor.add_child(this._clipBox);
 
-        const blurStrength = this._settings.get_int('gd-glass-blur') / 100;
         this._blurEffect = new Shell.BlurEffect({
-            radius: Math.round(blurStrength * MAX_BLUR_RADIUS),
+            radius: GLASS_BLUR_RADIUS,
             mode: Shell.BlurMode.ACTOR,
         });
         this._clipBox.add_effect(this._blurEffect);
@@ -135,7 +122,6 @@ export class GlassDock {
             settings: this._settings,
         });
         this._effect.setPadding(SHADER_PADDING);
-        this._applyTintSettings();
         const scale = St.ThemeContext.get_for_stage(global.stage).scale_factor;
         this._effect.setCornerRadius(
             this._settings.get_int('gd-glass-corner-radius') * scale);
@@ -162,16 +148,7 @@ export class GlassDock {
     _applyBlurRadius() {
         if (!this._blurEffect)
             return;
-        const t = this._settings.get_int('gd-glass-blur') / 100;
-        this._blurEffect.radius = Math.round(t * MAX_BLUR_RADIUS);
-    }
-
-    _applyTintSettings() {
-        if (!this._effect)
-            return;
-        const hex = this._settings.get_string('gd-glass-tint-color');
-        this._effect.setTintColor(...hexToColorArray(hex));
-        this._effect.setTintStrength(this._settings.get_double('gd-glass-tint-strength'));
+        this._blurEffect.radius = GLASS_BLUR_RADIUS;
     }
 
     onDockChromeTracked() {
@@ -774,7 +751,6 @@ export class GlassDock {
 
     applySettings() {
         this._applyBlurRadius();
-        this._applyTintSettings();
         this._lastBgW = undefined;
         if (this._active)
             this.updateVisibility();

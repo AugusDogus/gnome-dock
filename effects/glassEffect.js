@@ -1,7 +1,7 @@
 // -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil -*-
 
 /*
- * Frosted-glass Clutter.ShaderEffect — reference LiquidEffect API, squircle mask.
+ * Liquid-glass Clutter.ShaderEffect — reference LiquidEffect API, squircle mask.
  *
  * The corner geometry is the Figma/Lisse squircle (cubic shoulder + circular
  * arc + cubic shoulder). `getPathParamsForCorner` below is a verbatim port of
@@ -17,6 +17,12 @@ const DEFAULTS = {
     edgeSmoothing: 2.0,
     cornerRadius: 22,
     cornerSmoothing: 0.6,
+    saturation: 1.08,
+    displacementScale: 45.0,
+    ior: 1.5,
+    chromaStrength: 0.006,
+    rimWidth: 4.0,
+    lightAngleDeg: 50.0,
 };
 
 /* ------------------------------------------------------------------------- *
@@ -99,16 +105,6 @@ function floatValue(value) {
     return gval;
 }
 
-function hexToRgb(hex) {
-    if (!hex?.startsWith('#') || hex.length !== 7)
-        return [0.08, 0.08, 0.09];
-    return [
-        parseInt(hex.slice(1, 3), 16) / 255,
-        parseInt(hex.slice(3, 5), 16) / 255,
-        parseInt(hex.slice(5, 7), 16) / 255,
-    ];
-}
-
 export const GlassEffect = GObject.registerClass({
     GTypeName: 'GnomeDockGlassEffect',
 }, class GlassEffect extends Clutter.ShaderEffect {
@@ -139,13 +135,21 @@ export const GlassEffect = GObject.registerClass({
         this._setFloat('padding', this._padding);
         this._setFloat('isDock', 0);
         this._setFloat('edge_smoothing', DEFAULTS.edgeSmoothing);
-        this._setFloat('tint_strength', 0.35);
-        this._setFloat('tint_r', 0.08);
-        this._setFloat('tint_g', 0.08);
-        this._setFloat('tint_b', 0.09);
-        this._setFloat('saturation', 1.3);
-        this._setFloat('highlight_strength', 0.07);
-        this._setFloat('shadow_strength', 0.1);
+
+        this._setFloat('dark_tint', 0);
+        this._setFloat('saturation', DEFAULTS.saturation);
+
+        // Refraction + lighting defaults are material constants, not user
+        // preferences. These are intentionally close to the sane defaults from
+        // liquid-dom / ybouane/liquidglass: strong edge lensing, IOR around real
+        // glass, hairline specular, and no user-exposed neon-rim controls.
+        this._setFloat('corner_radius', this._cornerRadius);
+        this._setFloat('displacement_scale', DEFAULTS.displacementScale);
+        this._setFloat('ior', DEFAULTS.ior);
+        this._setFloat('chroma_strength', DEFAULTS.chromaStrength);
+        this._setFloat('rim_width', DEFAULTS.rimWidth);
+        this._setFloat('light_angle_deg', DEFAULTS.lightAngleDeg);
+
         this._applyCornerParams();
 
         if (this._settings)
@@ -191,38 +195,22 @@ export const GlassEffect = GObject.registerClass({
         this._setFloat('lpd', d);
         this._setFloat('asl', arcSectionLength);
 
+        // The refraction height field uses a plain rounded rect; match its
+        // radius to the (budget-clamped) Lisse radius so it tracks the
+        // silhouette.
+        this._setFloat('corner_radius', cornerRadius);
     }
 
     _bindSettings() {
         const s = this._settings;
 
-        const bindDouble = (key, uniform) => {
-            const apply = () => this._setFloat(uniform, s.get_double(key));
-            apply();
-            this._settingsIds.push(s.connect(`changed::${key}`, apply));
+        const applyDarkTint = () => {
+            this._setFloat('dark_tint',
+                s.get_boolean('gd-glass-dark-tint') ? 1 : 0);
         };
-
-        bindDouble('gd-glass-tint-strength', 'tint_strength');
-        bindDouble('gd-glass-saturation', 'saturation');
-        bindDouble('gd-glass-highlight-strength', 'highlight_strength');
-        bindDouble('gd-glass-shadow-strength', 'shadow_strength');
-
-        const applyTint = () => {
-            const [r, g, b] = hexToRgb(s.get_string('gd-glass-tint-color'));
-            this._setFloat('tint_r', r);
-            this._setFloat('tint_g', g);
-            this._setFloat('tint_b', b);
-        };
-        applyTint();
-        this._settingsIds.push(s.connect('changed::gd-glass-tint-color', applyTint));
-
-        const applySmoothing = () => {
-            this._smoothing = Math.max(0, Math.min(1,
-                s.get_double('gd-glass-corner-smoothing')));
-            this._applyCornerParams();
-        };
-        applySmoothing();
-        this._settingsIds.push(s.connect('changed::gd-glass-corner-smoothing', applySmoothing));
+        applyDarkTint();
+        this._settingsIds.push(
+            s.connect('changed::gd-glass-dark-tint', applyDarkTint));
     }
 
     cleanup() {
@@ -249,23 +237,16 @@ export const GlassEffect = GObject.registerClass({
         this._applyCornerParams();
     }
 
-    setTintColor(r, g, b) {
-        this._setFloat('tint_r', r);
-        this._setFloat('tint_g', g);
-        this._setFloat('tint_b', b);
-    }
-
-    setTintStrength(strength) {
-        this._setFloat('tint_strength', strength);
-    }
-
     setCornerRadius(radius) {
         this._cornerRadius = radius;
         this._applyCornerParams();
     }
 
-    setAnimationScale(_scale) {
-        // No-op for frosted glass; kept for reference API compatibility.
+    setAnimationScale(scale) {
+        // Scale the refraction distance with the dock's show/hide animation so
+        // the lensing grows in with the surface.
+        this._setFloat('displacement_scale', DEFAULTS.displacementScale * scale);
+        this._setFloat('chroma_strength', DEFAULTS.chromaStrength * scale);
     }
 
     setResolution(width, height) {

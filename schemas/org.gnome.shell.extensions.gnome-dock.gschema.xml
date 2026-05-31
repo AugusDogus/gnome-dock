@@ -51,48 +51,15 @@
     <value value='9' nick='DOT'/>
   </enum>
   <schema path="/org/gnome/shell/extensions/gnome-dock/" id="org.gnome.shell.extensions.gnome-dock">
-    <key type="i" name="gd-glass-blur">
-      <default>60</default>
-      <range min="0" max="100"/>
-      <summary>Glass blur strength</summary>
-      <description>Blur radius for the liquid glass dock background (0–100).</description>
-    </key>
-    <key type="d" name="gd-glass-tint-strength">
-      <default>0.35</default>
-      <range min="0" max="1"/>
-      <summary>Glass tint strength</summary>
-    </key>
-    <key type="s" name="gd-glass-tint-color">
-      <default>"#141416"</default>
-      <summary>Glass tint color</summary>
-    </key>
     <key type="i" name="gd-glass-corner-radius">
       <default>22</default>
       <range min="8" max="48"/>
       <summary>Glass corner radius</summary>
     </key>
-    <key type="d" name="gd-glass-corner-smoothing">
-      <default>0.6</default>
-      <range min="0" max="1"/>
-      <summary>Squircle smoothing (0=circular, 1=Lisse-like)</summary>
-    </key>
-    <key type="d" name="gd-glass-saturation">
-      <default>1.3</default>
-      <range min="0" max="2"/>
-      <summary>Glass backdrop saturation</summary>
-      <description>Saturation multiplier applied to the blurred backdrop (1.0 = unchanged).</description>
-    </key>
-    <key type="d" name="gd-glass-highlight-strength">
-      <default>0.07</default>
-      <range min="0" max="1"/>
-      <summary>Glass inner-rim highlight strength</summary>
-      <description>Brightness of the inner edge highlight that separates the dock on dark backgrounds.</description>
-    </key>
-    <key type="d" name="gd-glass-shadow-strength">
-      <default>0.1</default>
-      <range min="0" max="1"/>
-      <summary>Glass drop shadow strength</summary>
-      <description>Opacity of the soft drop shadow that separates the dock on light backgrounds.</description>
+    <key type="b" name="gd-glass-dark-tint">
+      <default>false</default>
+      <summary>Use dark liquid glass tint</summary>
+      <description>Switches the dock material from clear glass to a smoky dark tint.</description>
     </key>
     <key name="dock-position" enum="org.gnome.shell.extensions.gnome-dock.position">
       <default>'BOTTOM'</default>

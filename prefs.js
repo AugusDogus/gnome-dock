@@ -3,7 +3,7 @@
 /*
  * GNOME Dock — preferences window.
  *
- * Frosted glass tuning sliders for live iteration before hardcoding defaults.
+ * Liquid glass preferences.
  */
 
 import Adw from 'gi://Adw';
@@ -43,34 +43,22 @@ function makeIntSlider(settings, key, title, subtitle, {lower = 0, upper = 100} 
     return row;
 }
 
-function makeDoubleSlider(settings, key, title, subtitle, {lower, upper, step = 0.01, digits = 2} = {}) {
+function makeSwitch(settings, key, title, subtitle) {
     const row = new Adw.ActionRow({title, subtitle});
-    const adjustment = new Gtk.Adjustment({
-        lower,
-        upper,
-        step_increment: step,
-        page_increment: step * 10,
-        value: settings.get_double(key),
-    });
-    const scale = new Gtk.Scale({
-        adjustment,
-        orientation: Gtk.Orientation.HORIZONTAL,
-        draw_value: true,
-        value_pos: Gtk.PositionType.RIGHT,
-        digits,
-        hexpand: true,
-        width_request: 280,
+    const toggle = new Gtk.Switch({
+        active: settings.get_boolean(key),
         valign: Gtk.Align.CENTER,
     });
-    adjustment.connect('value-changed', () => {
-        settings.set_double(key, adjustment.value);
+    toggle.connect('notify::active', () => {
+        settings.set_boolean(key, toggle.active);
     });
     settings.connect(`changed::${key}`, () => {
-        const v = settings.get_double(key);
-        if (Math.abs(adjustment.value - v) > step * 0.5)
-            adjustment.value = v;
+        const v = settings.get_boolean(key);
+        if (toggle.active !== v)
+            toggle.active = v;
     });
-    row.add_suffix(scale);
+    row.add_suffix(toggle);
+    row.activatable_widget = toggle;
     return row;
 }
 
@@ -84,32 +72,17 @@ export default class GnomeDockPreferences extends ExtensionPreferences {
         });
 
         const group = new Adw.PreferencesGroup({
-            title: 'Frosted glass',
-            description: 'Blur, tint, and edge treatment — tune live, then we bake in what you like.',
+            title: 'Liquid glass',
+            description: 'The optical material is intentionally fixed; only the shape and clear/dark material mode are configurable.',
         });
-        group.add(makeIntSlider(settings, 'gd-glass-blur',
-            'Blur', 'Background blur strength (0–100).'));
-        group.add(makeDoubleSlider(settings, 'gd-glass-tint-strength',
-            'Tint strength', 'Dark overlay on the glass (0–1).',
-            {lower: 0, upper: 1, step: 0.01, digits: 2}));
-        group.add(makeDoubleSlider(settings, 'gd-glass-saturation',
-            'Saturation', 'Backdrop color boost (1.0 = unchanged).',
-            {lower: 0, upper: 2, step: 0.05, digits: 2}));
-        group.add(makeDoubleSlider(settings, 'gd-glass-highlight-strength',
-            'Edge highlight', 'Inner rim glow — pops on dark backgrounds (0–1).',
-            {lower: 0, upper: 1, step: 0.01, digits: 2}));
-        group.add(makeDoubleSlider(settings, 'gd-glass-shadow-strength',
-            'Drop shadow', 'Outer halo — pops on light backgrounds (0–1).',
-            {lower: 0, upper: 1, step: 0.01, digits: 2}));
         group.add(makeIntSlider(settings, 'gd-glass-corner-radius',
             'Corner radius', 'Pill corner radius in logical pixels.',
             {lower: 8, upper: 48}));
-        group.add(makeDoubleSlider(settings, 'gd-glass-corner-smoothing',
-            'Squircle smoothing', '0 = circular, 1 = Lisse-like.',
-            {lower: 0, upper: 1, step: 0.05, digits: 2}));
-
+        group.add(makeSwitch(settings, 'gd-glass-dark-tint',
+            'Dark tint', 'Use a smoky dark glass material instead of clear glass.'));
         page.add(group);
+
         window.add(page);
-        window.set_default_size(520, 320);
+        window.set_default_size(520, 260);
     }
 }
