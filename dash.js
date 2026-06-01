@@ -35,6 +35,32 @@ import {
 const DASH_ANIMATION_TIME = Dash.DASH_ANIMATION_TIME ?? 200;
 const DASH_VISIBILITY_TIMEOUT = 3;
 
+// Applications that should never show up in the dash, even while running.
+// Vicinae is a launcher overlay (StartupWMClass=vicinae); we keep it installed
+// without surfacing it as a running window in the dock, mirroring the
+// hide_from_app_list behaviour in the COSMIC applets fork.
+const IGNORED_APP_IDS = ['vicinae.desktop'];
+const IGNORED_WM_CLASSES = ['vicinae'];
+
+/**
+ * Whether an app should be hidden from the dash (e.g. launcher overlays).
+ * Matches both by desktop-file id and by the WM class of its windows, since a
+ * window-backed app may not resolve to the expected .desktop id.
+ *
+ * @param {Shell.App} app the running application to test
+ * @returns {boolean} true if the app should be excluded from the dash
+ */
+function appIsIgnored(app) {
+    const id = app.get_id()?.toLowerCase();
+    if (id && IGNORED_APP_IDS.includes(id))
+        return true;
+
+    return app.get_windows().some(win => {
+        const wmClass = win.get_wm_class()?.toLowerCase();
+        return wmClass && IGNORED_WM_CLASSES.includes(wmClass);
+    });
+}
+
 const Labels = Object.freeze({
     SHOW_MOUNTS: Symbol('show-mounts'),
     FIRST_LAST_CHILD_WORKAROUND: Symbol('first-last-child-workaround'),
@@ -771,7 +797,8 @@ export const DockDash = GObject.registerClass({
     _redisplay() {
         const favorites = AppFavorites.getAppFavorites().getFavoriteMap();
 
-        let running = this._appSystem.get_running();
+        let running = this._appSystem.get_running()
+            .filter(app => !appIsIgnored(app));
         const dockManager = Docking.DockManager.getDefault();
         const {settings} = dockManager;
 
