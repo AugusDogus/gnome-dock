@@ -606,13 +606,16 @@ const DockedDash = GObject.registerClass({
             settings,
             'changed::hidden-apps',
             () => {
-                this.dash.resetAppIcons();
+                // Apps are only added/removed (never reordered) when the hidden
+                // list changes, so reconcile via redisplay instead of a full
+                // resetAppIcons() teardown, which would jitter the dock width.
+                this.dash._queueRedisplay();
             },
         ], [
             settings,
             'changed::show-hidden-apps',
             () => {
-                this.dash.resetAppIcons();
+                this.dash._queueRedisplay();
             },
         ], [
             settings,
