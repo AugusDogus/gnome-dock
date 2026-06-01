@@ -7,6 +7,7 @@
  */
 
 import Adw from 'gi://Adw';
+import Gio from 'gi://Gio';
 import Gtk from 'gi://Gtk';
 
 import {ExtensionPreferences}
@@ -62,6 +63,63 @@ function makeSwitch(settings, key, title, subtitle) {
     return row;
 }
 
+function makeHiddenAppsExpander(settings, key) {
+    const expander = new Adw.ExpanderRow({
+        title: 'Hidden apps',
+    });
+
+    let rows = [];
+    const rebuild = () => {
+        rows.forEach(row => expander.remove(row));
+        rows = [];
+
+        const ids = settings.get_strv(key);
+        expander.subtitle = ids.length
+            ? `${ids.length} app${ids.length === 1 ? '' : 's'} hidden from the dock.`
+            : 'Right-click a dock icon and choose “Hide from Dock” to add one.';
+        expander.enable_expansion = ids.length > 0;
+
+        for (const id of ids) {
+            const info = Gio.DesktopAppInfo.new(id);
+            const row = new Adw.ActionRow({
+                title: info ? info.get_display_name() : id,
+                subtitle: info ? id : 'Not installed',
+            });
+
+            const gicon = info?.get_icon();
+            if (gicon) {
+                row.add_prefix(new Gtk.Image({
+                    gicon,
+                    pixel_size: 24,
+                }));
+            }
+
+            const button = new Gtk.Button({
+                icon_name: 'user-trash-symbolic',
+                tooltip_text: 'Unhide',
+                valign: Gtk.Align.CENTER,
+            });
+            button.add_css_class('flat');
+            button.connect('clicked', () => {
+                const current = settings.get_strv(key);
+                const index = current.indexOf(id);
+                if (index !== -1) {
+                    current.splice(index, 1);
+                    settings.set_strv(key, current);
+                }
+            });
+            row.add_suffix(button);
+
+            expander.add_row(row);
+            rows.push(row);
+        }
+    };
+
+    rebuild();
+    settings.connect(`changed::${key}`, rebuild);
+    return expander;
+}
+
 export default class GnomeDockPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
         const settings = this.getSettings();
@@ -89,6 +147,7 @@ export default class GnomeDockPreferences extends ExtensionPreferences {
         dockGroup.add(makeSwitch(settings, 'show-hidden-apps',
             'Show hidden apps',
             'Temporarily reveal hidden apps so they can be unhidden from the dock.'));
+        dockGroup.add(makeHiddenAppsExpander(settings, 'hidden-apps'));
         page.add(dockGroup);
 
         window.add(page);
