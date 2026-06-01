@@ -1198,6 +1198,25 @@ const DockAppIconMenu = class DockAppIconMenu extends PopupMenu.PopupMenu {
                 }
             }
 
+            if (this.sourceActor instanceof DockAppIcon) {
+                this._appendSeparator();
+
+                const {settings} = Docking.DockManager;
+                const appId = app.get_id();
+                const isHidden = (settings.hiddenApps ?? []).includes(appId);
+                const item = this._appendMenuItem(
+                    isHidden ? __('Show in Dock') : __('Hide from Dock'));
+                item.connect('activate', () => {
+                    const hidden = settings.get_strv('hidden-apps');
+                    const index = hidden.indexOf(appId);
+                    if (index === -1)
+                        hidden.push(appId);
+                    else
+                        hidden.splice(index, 1);
+                    settings.set_strv('hidden-apps', hidden);
+                });
+            }
+
             if (Shell.AppSystem.get_default().lookup_app('org.gnome.Software.desktop') &&
                 this.sourceActor instanceof DockAppIcon &&
                 !this.sourceActor.getSnapName()) {

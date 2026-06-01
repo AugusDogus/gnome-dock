@@ -266,6 +266,16 @@
       <summary>Show favorites apps</summary>
       <description>Show or hide favorite applications icons in the dash</description>
     </key>
+    <key type="as" name="hidden-apps">
+      <default>['vicinae.desktop']</default>
+      <summary>Applications hidden from the dock</summary>
+      <description>App ids (desktop file ids) hidden from the dash via the icon right-click "Hide from Dock" action. Vicinae, a launcher overlay, is hidden by default.</description>
+    </key>
+    <key type="b" name="show-hidden-apps">
+      <default>false</default>
+      <summary>Show hidden apps</summary>
+      <description>Temporarily reveal applications that have been hidden from the dock so they can be unhidden.</description>
+    </key>
     <key type="b" name="show-trash">
       <default>false</default>
       <summary>Show trash can</summary>

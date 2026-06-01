@@ -604,6 +604,18 @@ const DockedDash = GObject.registerClass({
             },
         ], [
             settings,
+            'changed::hidden-apps',
+            () => {
+                this.dash.resetAppIcons();
+            },
+        ], [
+            settings,
+            'changed::show-hidden-apps',
+            () => {
+                this.dash.resetAppIcons();
+            },
+        ], [
+            settings,
             'changed::show-trash',
             () => {
                 this.dash.resetAppIcons();

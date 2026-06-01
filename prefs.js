@@ -82,7 +82,16 @@ export default class GnomeDockPreferences extends ExtensionPreferences {
             'Dark tint', 'Use a smoky dark glass material instead of clear glass.'));
         page.add(group);
 
+        const dockGroup = new Adw.PreferencesGroup({
+            title: 'Dock',
+            description: 'Apps hidden via an icon\u2019s right-click \u201cHide from Dock\u201d action stay hidden until revealed here.',
+        });
+        dockGroup.add(makeSwitch(settings, 'show-hidden-apps',
+            'Show hidden apps',
+            'Temporarily reveal hidden apps so they can be unhidden from the dock.'));
+        page.add(dockGroup);
+
         window.add(page);
-        window.set_default_size(520, 260);
+        window.set_default_size(520, 360);
     }
 }

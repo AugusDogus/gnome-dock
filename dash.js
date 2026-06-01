@@ -772,7 +772,7 @@ export const DockDash = GObject.registerClass({
         const favorites = AppFavorites.getAppFavorites().getFavoriteMap();
 
         let running = this._appSystem.get_running()
-            .filter(app => !Utils.appIsIgnored(app));
+            .filter(app => !Utils.appIsHidden(app));
         const dockManager = Docking.DockManager.getDefault();
         const {settings} = dockManager;
 
@@ -810,8 +810,10 @@ export const DockDash = GObject.registerClass({
         const newApps = [];
 
         const {showFavorites} = settings;
-        if (showFavorites)
-            newApps.push(...Object.values(favorites));
+        if (showFavorites) {
+            newApps.push(...Object.values(favorites)
+                .filter(app => !Utils.appIsHidden(app)));
+        }
 
         if (settings.showRunning) {
             // We reorder the running apps so that they don't change position on the
