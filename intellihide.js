@@ -46,12 +46,6 @@ const handledWindowTypes = [
 // List of applications, ignore windows of these applications in considering intellihide
 const ignoreApps = ['com.rastersoft.ding', 'com.desktop.ding'];
 
-// Application ids / WM classes whose windows should never affect intellihide.
-// Vicinae is a launcher overlay that should not push or hide the dock when it
-// opens.
-const ignoreAppIds = ['vicinae.desktop'];
-const ignoreWmClasses = ['vicinae'];
-
 /**
  * A rough and ugly implementation of the intellihide behaviour.
  * Intallihide object: emit 'status-changed' signal when the overlap of windows
@@ -327,13 +321,8 @@ export class Intellihide {
             return false;
 
         // Ignore launcher overlays (e.g. Vicinae) so the dock doesn't react
-        // when they open. Match by tracked app id (which WindowTracker resolves
-        // from the launcher's StartupWMClass) and by WM class as a fallback.
-        const trackedApp = this._tracker.get_window_app(metaWindow);
-        if (trackedApp && ignoreAppIds.includes(trackedApp.get_id()))
-            return false;
-        const wmClass = metaWindow.get_wm_class()?.toLowerCase();
-        if (wmClass && ignoreWmClasses.includes(wmClass))
+        // when they open.
+        if (Utils.windowIsIgnored(metaWindow, this._tracker))
             return false;
 
         // The DropDownTerminal extension uses the POPUP_MENU window type hint

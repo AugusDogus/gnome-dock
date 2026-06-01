@@ -19,6 +19,45 @@ export const SignalsHandlerFlags = Object.freeze({
     CONNECT_AFTER: 1,
 });
 
+// Applications kept installed but hidden from the dock, e.g. launcher overlays
+// like Vicinae (StartupWMClass=vicinae). Matched by desktop-file id and by WM
+// class so window-backed apps that don't resolve to the expected .desktop id
+// are still caught.
+export const IGNORED_APP_IDS = ['vicinae.desktop'];
+export const IGNORED_WM_CLASSES = ['vicinae'];
+
+/**
+ * Whether a window belongs to an ignored app (e.g. a launcher overlay).
+ *
+ * @param {Meta.Window} metaWindow the window to test
+ * @param {Shell.WindowTracker} [tracker] optional tracker to resolve the app id
+ * @returns {boolean} true if the window should be ignored
+ */
+export function windowIsIgnored(metaWindow, tracker = null) {
+    const app = tracker?.get_window_app(metaWindow);
+    if (app && IGNORED_APP_IDS.includes(app.get_id()?.toLowerCase()))
+        return true;
+
+    const wmClass = metaWindow.get_wm_class()?.toLowerCase();
+    return !!wmClass && IGNORED_WM_CLASSES.includes(wmClass);
+}
+
+/**
+ * Whether a running app should be hidden from the dash (e.g. launcher overlays).
+ * Matches by desktop-file id and by the WM class of its windows, since a
+ * window-backed app may not resolve to the expected .desktop id.
+ *
+ * @param {Shell.App} app the application to test
+ * @returns {boolean} true if the app should be excluded from the dash
+ */
+export function appIsIgnored(app) {
+    const id = app.get_id()?.toLowerCase();
+    if (id && IGNORED_APP_IDS.includes(id))
+        return true;
+
+    return app.get_windows().some(win => windowIsIgnored(win));
+}
+
 const GENERIC_KEY = Symbol('generic');
 
 /**
