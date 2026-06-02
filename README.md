@@ -15,6 +15,7 @@
 
 - Floating bottom dock with frosted-glass squircle visuals
 - **Hide apps from the dock**: right-click any dock icon and choose _Hide from Dock_ to keep it out of the dash. Hidden apps are managed from the extension preferences, where a _Show hidden apps_ toggle reveals them in-dock and a collapsible _Hidden apps_ list lets you unhide them by name. The [Vicinae](https://github.com/vicinaehq/vicinae) launcher overlay is hidden by default and is always ignored by intellihide.
+- **Drag to reorder window thumbnails**: drag the thumbnails in an app's window-preview popup to reorder them. The custom order is shared across every monitor's dock for the session.
 
 ## Tech Stack
 
