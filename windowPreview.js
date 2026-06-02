@@ -15,6 +15,7 @@ import {
 
 import {
     BoxPointer,
+    DND,
     Main,
     PopupMenu,
     Workspace,
@@ -33,6 +34,36 @@ const PREVIEW_ANIMATION_DURATION = 250;
 const MAX_PREVIEW_GENERATION_ATTEMPTS = 15;
 
 const MENU_MARGINS = 10;
+
+// Custom per-app order for the window-preview popups, keyed by app id and
+// holding an ordered array of window stable sequences. It is shared across all
+// dock popups so a manual reorder on one monitor is reflected everywhere for
+// the rest of the session.
+const customWindowOrders = new Map();
+
+/**
+ * Sort an app's windows by the user's custom drag order, falling back to the
+ * stable sequence for windows that haven't been manually placed.
+ *
+ * @param {string} appId the application id used as the order key
+ * @param {Meta.Window[]} windows the windows to sort (sorted in place)
+ * @returns {Meta.Window[]} the sorted windows
+ */
+function sortWindowsByCustomOrder(appId, windows) {
+    const order = customWindowOrders.get(appId);
+    const rank = win => {
+        const seq = win.get_stable_sequence();
+        const index = order ? order.indexOf(seq) : -1;
+        return index === -1 ? Number.MAX_SAFE_INTEGER : index;
+    };
+
+    return windows.sort((a, b) => {
+        const delta = rank(a) - rank(b);
+        if (delta !== 0)
+            return delta;
+        return a.get_stable_sequence() - b.get_stable_sequence();
+    });
+}
 
 export class WindowPreviewMenu extends PopupMenu.PopupMenu {
     constructor(source) {
@@ -180,7 +211,61 @@ class WindowPreviewList extends PopupMenu.PopupMenuSection {
 
     _createPreviewItem(window) {
         const preview = new WindowPreviewMenuItem(window, Utils.getPosition());
+        preview._previewList = this;
         return preview;
+    }
+
+    _previewItems() {
+        return this._getMenuItems().filter(item => item._window);
+    }
+
+    // Drop target index for the pointer position, expressed in the coordinate
+    // space of the scroll view (the drop-target actor). Items are laid out in
+    // the box at this same origin, so child positions can be compared directly.
+    _dropTargetIndex(x, y, items) {
+        const coord = this.isHorizontal ? x : y;
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            const base = this.isHorizontal ? item.get_x() : item.get_y();
+            const size = this.isHorizontal ? item.get_width() : item.get_height();
+            if (coord < base + size / 2)
+                return i;
+        }
+        return items.length - 1;
+    }
+
+    handleDragOver(source, _actor, x, y, _time) {
+        if (!(source instanceof WindowPreviewMenuItem))
+            return DND.DragMotionResult.NO_DROP;
+
+        const items = this._previewItems();
+        const sourceIndex = items.indexOf(source);
+        if (sourceIndex === -1)
+            return DND.DragMotionResult.NO_DROP;
+
+        const targetIndex = this._dropTargetIndex(x, y, items);
+        if (targetIndex !== -1 && targetIndex !== sourceIndex) {
+            this.box.set_child_at_index(source, targetIndex);
+            this._reordered = true;
+        }
+
+        return DND.DragMotionResult.MOVE_DROP;
+    }
+
+    acceptDrop(source, _actor, _x, _y, _time) {
+        if (!(source instanceof WindowPreviewMenuItem) ||
+            !this._previewItems().includes(source))
+            return false;
+
+        this._persistOrder();
+        this._reordered = false;
+        return true;
+    }
+
+    _persistOrder() {
+        const sequences = this._previewItems().map(item =>
+            item._window.get_stable_sequence());
+        customWindowOrders.set(this.app.get_id(), sequences);
     }
 
     _redisplay() {
@@ -193,9 +278,9 @@ class WindowPreviewList extends PopupMenu.PopupMenuSection {
             return actor._window;
         });
 
-        // All app windows with a static order
-        const newWin = this._source.getInterestingWindows().sort((a, b) =>
-            a.get_stable_sequence() > b.get_stable_sequence());
+        // All app windows, honoring the user's custom drag order when present
+        const newWin = sortWindowsByCustomOrder(this.app.get_id(),
+            this._source.getInterestingWindows());
 
         const addedItems = [];
         const removedActors = [];
@@ -399,7 +484,34 @@ class WindowPreviewMenuItem extends PopupMenu.PopupBaseMenuItem {
 
         this._cloneTexture(window);
 
+        // Allow reordering the thumbnails by dragging them within the popup.
+        this._draggable = DND.makeDraggable(this, {
+            timeoutThreshold: 200,
+            dragActorOpacity: 180,
+        });
+        this._draggable.connect('drag-end', (_d, _time, success) => {
+            // Restore the saved order if the thumbnail wasn't dropped on the list
+            if (!success)
+                this._previewList?._queueRedisplay();
+        });
+
         this.connect('destroy', this._onDestroy.bind(this));
+    }
+
+    getDragActor() {
+        const [width, height] = this._cloneBin.get_size();
+        if (this._mutterWindow) {
+            return new Clutter.Clone({
+                source: this._mutterWindow,
+                width,
+                height,
+            });
+        }
+        return new St.Bin({width, height, style_class: 'window-preview-drag-actor'});
+    }
+
+    getDragActorSource() {
+        return this._cloneBin;
     }
 
     vfunc_style_changed() {
